@@ -1,48 +1,100 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-contract PaymentEscrow {
-    address public owner;
+/// @title Simple Escrow (beginner-friendly)
+/// @notice Owner deposits ETH, can release to receiver or refund to owner. Single active deposit.
+contract Escrow {
+    address payable public owner;
     address payable public receiver;
+    uint256 public amount;    // amount locked (wei)
+    bool public funded;
+    bool private locked;      // simple reentrancy guard
 
-    bool public released;
-    bool public refunded;
+    event Deposited(address indexed from, uint256 value);
+    event Released(address indexed to, uint256 value);
+    event Refunded(address indexed to, uint256 value);
+    event ReceiverChanged(address indexed oldReceiver, address indexed newReceiver);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner allowed");
+        _;
+    }
+
+    modifier nonReentrant() {
+        require(!locked, "Reentrant");
+        locked = true;
+        _;
+        locked = false;
+    }
 
     constructor(address payable _receiver) {
-        owner = msg.sender; // Account 1 (client)
-        receiver = _receiver; // Account 2 (freelancer)
+        require(_receiver != address(0), "Receiver is zero address");
+        owner = payable(msg.sender);
+        receiver = _receiver;
     }
 
-    // 1️⃣ Deposit ETH into contract
-    function deposit() public payable {
-        require(msg.sender == owner, "Only owner can deposit");
-        require(msg.value > 0, "Send some ETH");
+    /// Deposit ETH into the escrow. Only owner, only when not already funded.
+    function deposit() external payable onlyOwner {
+        require(!funded, "Escrow already funded");
+        require(msg.value > 0, "Must send > 0 ETH");
+
+        // store deposit amount explicitly from msg.value
+        amount = msg.value;
+        funded = true;
+
+        emit Deposited(msg.sender, msg.value);
     }
 
-    // 2️⃣ Release payment to receiver
-    function releasePayment() public {
-        require(msg.sender == owner, "Only owner");
-        require(!released, "Already released");
-        require(!refunded, "Already refunded");
+    /// Release funds to receiver. Only owner.
+    function release() external onlyOwner nonReentrant {
+        require(funded, "No funds to release");
 
-        released = true;
-        (bool success, ) = receiver.call{value: address(this).balance}("");
-        require(success, "Transfer failed");
+        uint256 payout = amount;
+
+        // Effects
+        funded = false;
+        amount = 0;
+
+        // Interaction: use call to forward gas and bubble up failure
+        (bool ok, ) = receiver.call{value: payout}("");
+        require(ok, "Transfer to receiver failed");
+
+        emit Released(receiver, payout);
     }
 
-    // 3️⃣ Refund payment to owner
-    function refund() public {
-        require(msg.sender == owner, "Only owner");
-        require(!released, "Already released");
-        require(!refunded, "Already refunded");
+    /// Refund funds back to owner. Only owner.
+    function refund() external onlyOwner nonReentrant {
+        require(funded, "No funds to refund");
 
-        refunded = true;
-        (bool success, ) = owner.call{value: address(this).balance}("");
-        require(success, "Transfer failed");
+        uint256 payout = amount;
+
+        funded = false;
+        amount = 0;
+
+        (bool ok, ) = owner.call{value: payout}("");
+        require(ok, "Refund failed");
+
+        emit Refunded(owner, payout);
     }
 
-    // Helper: check contract balance
-    function getBalance() public view returns (uint) {
+    function changeReceiver(address payable _new) external onlyOwner {
+        require(_new != address(0), "Invalid new receiver");
+        address old = receiver;
+        receiver = _new;
+        emit ReceiverChanged(old, _new);
+    }
+
+    // Helpers
+    function contractBalance() external view returns (uint256) {
         return address(this).balance;
+    }
+
+    // Prevent accidental plain transfers; force use of deposit()
+    receive() external payable {
+        revert("Use deposit()");
+    }
+
+    fallback() external payable {
+        revert("Use deposit()");
     }
 }
