@@ -11,6 +11,7 @@ contract EscrowStep1 {
 
     // Event (2)
     event Deposited(address indexed from, uint256 value);
+    event Released(address indexed to, uint256 value);
 
     // Modifier (3)
     modifier onlyOwner() {
@@ -35,5 +36,21 @@ contract EscrowStep1 {
         funded = true;
 
         emit Deposited(msg.sender, msg.value);
+    }
+
+    // Step 2: Release Funtion
+    function release() external onlyOwner {
+        uint256 payout = address(this).balance;
+        
+        require(payout > 0, "No funds to release");
+        
+    
+        amount = 0;
+        funded = false;
+
+        (bool sent, ) = receiver.call{value: payout}(""); 
+        require(sent, "Transfer to receive failed");
+
+        emit Released(receiver, payout);
     }
 }

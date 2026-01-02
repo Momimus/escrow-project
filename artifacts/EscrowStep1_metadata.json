@@ -36,6 +36,25 @@
 				"type": "event"
 			},
 			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "to",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "value",
+						"type": "uint256"
+					}
+				],
+				"name": "Released",
+				"type": "event"
+			},
+			{
 				"inputs": [],
 				"name": "amount",
 				"outputs": [
@@ -93,6 +112,13 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "release",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -123,11 +149,11 @@
 	},
 	"sources": {
 		"CompleteEscrow.sol": {
-			"keccak256": "0x82974b8d40f76d6f0b91dcae733a9698628d70d92432d3a9ec0eeba0fa312abf",
+			"keccak256": "0x1189250eec463486283dbf49f0bff0b497512688c8c77ee5f321d46f56c60107",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2a6f8c51a33f3775faf6dcb3113a9e52dc4eddd0ba63f25c4c5f2b70f6fe7837",
-				"dweb:/ipfs/QmQHCxTsXMKVLJf1EZccyxzedAW2hvhhTXyaWKrsG19udQ"
+				"bzz-raw://5fd1058e37afbb2dd8609aad1efed99a73ff5f069aea7506848359b047fa8c32",
+				"dweb:/ipfs/QmNTkDXhp2SUxdWXbaE3FsvbN73uCBb6twkJowFszmbvKs"
 			]
 		}
 	},
